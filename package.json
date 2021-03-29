@@ -4,8 +4,10 @@
   "license": "AGPL-3.0-or-later",
   "homepage": "https://slaytheweb.cards",
   "bugs": "https://github.com/oskarrough/slaytheweb/issues",
+  "type": "module",
   "scripts": {
     "start": "servor public --reload",
+    "cli": "node public/cli/app.js",
     "lint": "eslint public tests --fix",
     "test": "ava",
     "test:watch": "ava --watch",
@@ -23,15 +25,16 @@
     "nyc": "^15.1.0",
     "prettier": "2.2.1",
     "servor": "^4.0.2",
-    "snowpack": "^1.7.1",
-    "yarn": "^1.22.10"
+    "snowpack": "^1.7.1"
   },
   "dependencies": {
+    "blessed": "^0.1.81",
     "esm": "^3.2.25",
     "gsap": "^3.6.0",
     "htm": "^3.0.3",
     "immer": "^6.0.0",
-    "tone": "^14.8.9"
+    "tone": "^14.8.9",
+    "util": "^0.12.3"
   },
   "ava": {
     "require": [
