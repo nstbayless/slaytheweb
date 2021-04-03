@@ -128,7 +128,10 @@ export class TUI {
         })
     }
 
-    remove_component(component, default_value) {
+    remove_component(component, default_value=undefined) {
+        // shortcut if component is not actually attached.
+        if (!component || !component.tui) return default_value
+
         // perform component's onClose() event
         let rv = $d(component.onClose(), default_value)
 

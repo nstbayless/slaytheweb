@@ -13,6 +13,7 @@ export default class App {
         this.quit = false
         this.tui = new TUI()
         this.tui.content_margin_top = 2
+        this.base_component = null
     }
 
     async loop() {
@@ -20,11 +21,44 @@ export default class App {
         this.game.enqueue({type: 'move', move})
         while (true)
         {
+            // apply the next action on the queue.
             let action = await this.dequeue()
+
+            // ensures we are at the top of the event loop (prevents any accidental stack overflows)
             await async_sleep(0)
+
+            // set the correct base component UI
+            // (TODO: dungeon map should be considered one of these as well.)
+            this.set_base_component()
+
+            // temporary: end game now.
             this.tui.end()
             console.log(action)
             process.exit(0)
+        }
+    }
+
+    // sets base screen (combat, merchant, etc.)
+    async set_base_component() {
+        if (this.base_component)
+        {
+            this.tui.detach(this.base_component)
+        }
+        this.base_component = create_base_component()
+        this.tui.attach(this.base_component)
+    }
+
+    // this depends on the current room type (combat, merchant, etc.)
+    async create_base_component() {
+        let current_room_type = getCurrRoom(this.game.state).type
+        if (current_room_type == "monster")
+        {
+        }
+        else
+        {
+            this.tui.end()
+            console.log(`unknown room type: ${current_room_type}`)
+            exit(0)
         }
     }
 
