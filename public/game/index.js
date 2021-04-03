@@ -33,14 +33,35 @@ export default function createNewGame() {
 	return {
 		state: createNewState(),
 		actions,
-		enqueue: actionManager.enqueue,
+		signalees: [],
+		// receive a callback after something has been enqueued
+		listen_once(cb) {
+			this.signalees.push(cb)
+		},
+		enqueue(a) {
+			actionManager.enqueue(a)
+			const signalees = this.signalees
+			this.signalees = []
+			setTimeout(() => {
+				for (cb of signalees)
+				{
+					cb()
+				}
+			}, 0)
+		},
+		// return true if dequeue successful
 		dequeue() {
 			try {
 				const nextState = actionManager.dequeue(this.state)
-				if (nextState) this.state = nextState
+				if (nextState)
+				{
+					this.state = nextState
+					return true
+				}
 			} catch (err) {
 				console.warn(err)
 			}
+			return false
 		},
 		undo() {
 			const prevGame = actionManager.undo()

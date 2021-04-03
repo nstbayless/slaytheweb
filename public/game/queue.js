@@ -11,4 +11,11 @@ export default class Queue {
 	dequeue() {
 		return this.list.shift()
 	}
+	// retrieves front element without dequeuing it
+	peek() {
+		if (this.list.length > 0)
+			return this.list[0]
+		else
+			return undefined
+	}
 }
