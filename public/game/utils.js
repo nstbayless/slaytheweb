@@ -56,6 +56,16 @@ export function getCurrRoom(state) {
 	return node.room
 }
 
+// returns monster from current room's monsters by ID
+export function getMonsterById(state, id)
+{
+	for (let monster of getCurrRoom(state).monsters)
+	{
+		if (monster.id == id) return monster
+	}
+	return null
+}
+
 // Returns an array of targets (player or monsters) in the current room.
 // The "target" argument must be either "player", "enemyx" (where x is the index) or "all enemies"
 export function getTargets(state, targetString) {

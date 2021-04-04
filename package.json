@@ -8,6 +8,7 @@
   "scripts": {
     "start": "servor public --reload",
     "cli": "node public/cli/app.js",
+    "cli:debug": "node --inspect-brk=5858 public/cli/app.js",
     "lint": "eslint public tests --fix",
     "test": "ava",
     "test:watch": "ava --watch",

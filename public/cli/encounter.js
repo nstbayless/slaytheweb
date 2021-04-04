@@ -1,5 +1,5 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
-import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines} from './util.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById} from '../game/utils.js'
+import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
 import { TUI } from './tui.js'
 import { globals, g } from './constants.js'
 
@@ -10,11 +10,38 @@ class Region {
         this.y = undefined
         this.w = undefined
         this.h = undefined
-        this.selectable = true
+        this.selectable = (context) => false
         this.render = (program) => {}
         this.get_info = () => null
+        this.activate = async (context) => {}
         _.extend(this, props)
     }
+}
+
+function get_target_string(state, target)
+{
+    if (target === state.player) return "player"
+    if (target === "all enemies") return "all enemies"
+    let monsters = getCurrRoom(state).monsters
+    let idx = monsters.indexOf(target)
+    if (idx < 0) throw "monster not found"
+    return `enemy${idx}`
+}
+
+// finds all targets matching the given description.
+// description: 'enemy', 'player', 'all enemies', etc.
+function collect_targets(state, targets_desc)
+{
+    let monsters = getCurrRoom(state).monsters
+    let player = state.player
+    if (targets_desc == 'all enemies')
+    {
+        if (monsters.length == 0) return []
+        return ['all enemies']
+    }
+    if (targets_desc == 'enemy') return monsters
+    if (targets_desc == 'player') return [player]
+    return []
 }
 
 function draw_hp_bar_and_block(program, props)
@@ -23,7 +50,11 @@ function draw_hp_bar_and_block(program, props)
     {
         // alts: 🛡⛉
         let str = "⛊" + Math.floor(props.block) + " "
-        if (program.move(props.x - str.length, props.y))
+        if (program.move(
+            (props.blockAlign == "left")
+                ? props.x - str.length
+                : props.x + props.width + 1,
+            props.y))
         {
             program.write(str)
         }
@@ -56,6 +87,7 @@ function draw_hp_bar(program, hp, maxhp, width, color)
 
 export function encounter_component(game) {
     return {
+        name: "encounter",
         depth: [TUI.BASE_DEPTH],
         game: game,
         state: null,
@@ -68,6 +100,7 @@ export function encounter_component(game) {
         h: undefined,
         selected_region: null,
         display_info: null,
+        contexts: [],
         // refreshes UI state which depends on the game state.
         // (this does not include e.g. cursor position)
         refresh_state: function(force=false) {
@@ -80,23 +113,159 @@ export function encounter_component(game) {
             }
             return false
         },
+        // adds an element to the stack of contexts. Returns when it resolves (pop_context)
+        // "contexts" are interactions for the player, e.g. "select a card" or "target an enemy"
+        // they resolve to null if nothing was selected.
+        push_context: function(props)
+        {
+            props = _.extend({
+                    type: undefined,
+                    _resolve: undefined,
+                    can_cancel: false,
+                    hover_color: $d(g.colors.hover[props.type], g.colors.hover.default)
+                },
+                props
+            )
+            this.contexts.push(props)
+            props.selected_region = this.get_default_selected_region(props)
+            return new Promise((resolve, reject) => {
+                props._resolve = resolve
+            })
+        },
+        // pops and resolves the current context
+        // this may have the immediate side-effect of performing whatever
+        // action is tied to the resolution of this context.
+        pop_context: function(value=null)
+        {
+            let context = this.get_context()
+            $remove(this.contexts, context)
+            context._resolve(value)
+        },
+        // retrieves topmost context, or {type: null} if no context available.
+        get_context: function(){
+            if (this.contexts.length == 0) return {type: null}
+            let context = this.contexts[this.contexts.length - 1]
+
+            // (paranoia) if context cannot be resolved for some reason,
+            // don't allow it to be accessed at all.
+            if (context._resolve === undefined) return {type: null}
+            return context
+        },
+        get_selected_region: function()
+        {
+            let context = this.get_context()
+            if (context && context.selected_region) return context.selected_region
+            return null
+        },
+        set_selected_region: function(region)
+        {
+            let context = this.get_context()
+            if (context) context.selected_region = region
+        },
+        get_default_selected_region: function(context)
+        {
+            for (let region of this.regions)
+            {
+                if (region.selectable(context)) return region
+            }
+            return null
+        },
         // recreate all regions from scratch
         refresh_regions(force=false)
         {
             if (this.hand !== this.state.hand || force)
             {
                 this.hand = this.state.hand
-                this.refresh_hand(force)
+                this.refresh_hand_regions(force)
             }
 
             let monsters = getCurrRoom(this.state).monsters
-            if (this.monsters !== monsters)
+            if (this.monsters !== monsters || force)
             {
                 this.monsters = monsters
-                this.refresh_monsters(force)
+                this.refresh_monsters_regions(force)
+            }
+
+            if (force)
+            {
+                this.refresh_players_region(force)
             }
         },
-        refresh_monsters(force=false)
+        refresh_players_region(force=false)
+        {
+            // remove all "player"-region objects
+            this.regions = this.regions.filter((region) => region.owner !== "players")
+
+            const 
+                left = 0,
+                right = g.MIN_PLAYER_ZONE_WIDTH,
+                top = g.TOOLBAR_HEIGHT,
+                bottom = $d(this.hand_top_y, this.h)
+            
+            // center vertically
+            const rows_needed = 3
+            let y = top + Math.floor((bottom - top) / 2 - rows_needed / 2)
+
+            this.regions.push(new Region({
+                owner: "players",
+                root: this,
+                x: left,
+                y: y,
+                width: right - left,
+                height: rows_needed,
+                selectable: function (context) {
+                    let type = context.type
+
+                    // players are hoverable when in turn top-level
+                    if (type == "turn-action") return true
+
+                    // players are hoverable if the context is to select a target,
+                    // and the player is one of those targets.
+                    if (type == "select-target") return context.possible_targets.includes(this.root.game.state.player)
+
+                    // otherwise, not hoverable
+                    return false
+                },
+                activate: function(context) {
+                    if (context.type == "select-target")
+                    {
+                        // activating a player while selecting a target
+                        // means selecting that player as the target.
+                        this.root.pop_context(this.root.game.state.player)
+                    }
+                },
+                render: function(program)
+                {
+                    let x = this.x, y = this.y
+                    let player = this.root.game.state.player
+                    let name = $d(player.name, `player`)
+
+                    // write name
+                    program.move(x + Math.floor(this.width / 2 - name.length/2), y)
+                    if (this.root.get_selected_region() === this)
+                    {
+                        program.bg(this.root.get_context().hover_color)
+                    }
+                    program.write(name)
+                    program.resetcol()
+                    let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH
+                    y += 1;
+                    draw_hp_bar_and_block(program, {
+                        hp: player.currentHealth,
+                        maxhp:player.maxHealth,
+                        block: player.block,
+                        width: hpbarwidth,
+                        blockAlign: "right",
+                        x: x + Math.floor(this.width / 2 - hpbarwidth / 2),
+                        y: y
+                    })
+                    program.move(x, ++y)
+                    program.write("(status...)")
+                }
+            })
+            )
+        },
+        refresh_monsters_regions(force=false)
         {
             // remove all "monster"-region objects
             this.regions = this.regions.filter((region) => region.owner !== "monster")
@@ -120,25 +289,48 @@ export function encounter_component(game) {
             for (let monster of monsters)
             {
                 this.regions.push(new Region({
-                    selectable: true,
                     owner: "monsters",
                     root: this,
-                    monster: monster,
+                    monster_id: monster.id,
                     i: i++,
                     x: left,
                     y: y,
-                    width: right - top,
+                    width: right - left,
                     height: lines_per_monster,
+                    selectable: function (context)
+                    {
+                        let type = context.type
+
+                        // monsters are hoverable when in turn top-level
+                        if (type == "turn-action") return true
+
+                        // monsters are hoverable if the context is to select a target,
+                        // and the monster is one of those targets.
+                        if (type == "select-target") return context.possible_targets.includes(getMonsterById(this.root.game.state, this.monster_id))
+
+                        // otherwise, not hoverable
+                        return false
+                    },
+                    activate: function(context) {
+                        if (context.type == "select-target")
+                        {
+                            // activating a monster while selecting a target
+                            // means selecting that monster as the target.
+                            this.root.pop_context(getMonsterById(this.root.game.state, this.monster_id))
+                        }
+                    },
                     render: function(program)
                     {
                         let x = this.x, y = this.y
-                        let name = $d(this.monster.name, `monster ${this.i}`)
+                        let monster = getMonsterById(this.root.game.state, this.monster_id)
+                        if (!monster) return
+                        let name = $d(monster.name, `monster ${this.i}`)
 
                         // write name
-                        program.move(x + Math.floor(g.MIN_ENEMY_ZONE_WIDTH / 2 - name.length/2), y)
-                        if (this.root.selected_region === this)
+                        program.move(x + Math.floor(this.width / 2 - name.length/2), y)
+                        if (this.root.get_selected_region() === this)
                         {
-                            program.bg(g.colors.hover)
+                            program.bg(this.root.get_context().hover_color)
                         }
                         program.write(name)
                         program.resetcol()
@@ -149,7 +341,8 @@ export function encounter_component(game) {
                             maxhp:monster.maxHealth,
                             block: monster.block,
                             width:hpbarwidth,
-                            x: x + Math.floor(g.MIN_ENEMY_ZONE_WIDTH / 2 - hpbarwidth / 2),
+                            blockAlign: "left",
+                            x: x + Math.floor(this.width / 2 - hpbarwidth / 2),
                             y: y
                         })
                         program.move(x, ++y)
@@ -160,7 +353,7 @@ export function encounter_component(game) {
                 y += lines_per_monster
             }
         },
-        refresh_hand(force=false)
+        refresh_hand_regions(force=false)
         {
             // remove all "hand"-region objects
             this.regions = this.regions.filter((region) => region.owner !== "hand")
@@ -175,7 +368,6 @@ export function encounter_component(game) {
             // bar along top
             this.regions.push(
                 new Region({
-                    selectable: false,
                     owner: "hand",
                     x: 0,
                     y: top,
@@ -193,7 +385,6 @@ export function encounter_component(game) {
             // energy region:
             this.regions.push(
                 new Region({
-                    selectable: false,
                     owner: "hand",
                     root: this,
                     x: 0,
@@ -202,8 +393,8 @@ export function encounter_component(game) {
                     w: 4,
                     h: 4,
                     render: function(program) {
-                        const energy = this.root.state.player.currentEnergy
-                        const max_energy = this.root.state.player.maxEnergy
+                        const energy = this.root.game.state.player.currentEnergy
+                        const max_energy = this.root.game.state.player.maxEnergy
                         let y = this.y
                         let x = this.x
                         for (let i = 0; i < this.h; ++i)
@@ -241,7 +432,6 @@ export function encounter_component(game) {
             {
                 this.regions.push(
                     new Region({
-                        selectable: true,
                         owner: "hand",
                         root: this,
                         card: card,
@@ -249,6 +439,7 @@ export function encounter_component(game) {
                         y: y,
                         h: 1,
                         w: g.CARD_SLOT_WIDTH,
+                        selectable: (context) => context.type == "turn-action",
                         get_info: function() {
                             return {
                                 header: `(${card.energy}) ${card.name}`,
@@ -262,9 +453,9 @@ export function encounter_component(game) {
                             const card = this.card
 
                             // set bg if selected
-                            if (this == this.root.selected_region)
+                            if (this == this.root.get_selected_region())
                             {
-                                program.bg(g.colors.hover)
+                                program.bg(this.root.get_context().hover_color)
                             }
 
                             // write text
@@ -300,6 +491,20 @@ export function encounter_component(game) {
                             program.write(name_str)
 
                             program.resetcol()
+                        },
+                        activate: async function(context) {
+                            if (context.type == "turn-action")
+                            {
+                                let target = await this.root.select_target(card.target)
+                                if (target)
+                                {
+                                    this.root.pop_context({
+                                        type: 'play-card',
+                                        card: this.card,
+                                        target: target
+                                    })
+                                }
+                            }
                         }
                     })
                 )
@@ -316,6 +521,26 @@ export function encounter_component(game) {
         onAdd: function() {
             this.refresh_state(this.refresh_dimensions())
         },
+        // main event loop -- returns an action to enqueue
+        exec: async function() {            
+            // wait for the player to select a turn-action to do.
+            let turn_action = await this.push_context({
+                type: 'turn-action'
+            })
+
+            if (turn_action.type == "play-card")
+            {
+                // enqueue an action.
+                return {
+                    type: "playCard",
+                    card: turn_action.card,
+                    target: get_target_string(this.game.state, turn_action.target)
+                }
+            }
+
+            // no action.
+            return null
+        },
         refresh_dimensions() {
             // update screen dimensions and force a full refresh
             // if needed.
@@ -330,9 +555,10 @@ export function encounter_component(game) {
             return false
         },
         onKeypress: function(event) {
+            let context = this.get_context()
+            let selected_region = this.get_selected_region()
 
             // TODO: consider not allowing keypresses if state queue is not empty.
-
             let delta_x = 0, delta_y = 0
             if (event.full == "up") delta_y--
             if (event.full == "down") delta_y++
@@ -342,32 +568,44 @@ export function encounter_component(game) {
             // adjust selection
             if (delta_x != 0 || delta_y != 0)
             {
-                let new_selection = this.selected_region
-                if (this.regions.includes(this.selected_region))
+                let new_selection = this.get_selected_region()
+                if (this.regions.includes(this.get_selected_region()))
                 {
                     new_selection = this.get_new_selection(delta_x, delta_y)
                 }
                 else
                 {
                     // default selection
-                    let selectable_regions = this.regions.filter((region) => region.selectable)
+                    let selectable_regions = this.regions.filter((region) => region.selectable(context))
                     if (selectable_regions.length > 0)
                     {
                         new_selection = selectable_regions[0]
                     }
                 }
 
-                if (new_selection && new_selection != this.selected_region)
+                if (new_selection && new_selection != selected_region)
                 {
-                    this.selected_region = new_selection
+                    this.set_selected_region(new_selection)
                 }
             }
+
+            // activate selection
+            if (event.full == "enter" && selected_region)
+            {
+                selected_region.activate(context)
+            }
+
+            if (event.full == "escape" || event.full == "esc")
+            {
+                if (context.can_cancel) this.pop_context()
+            }
+
             // steal keypress
             return true
         },
         get_new_selection: function (delta_x, delta_y)
         {
-            let src = this.selected_region
+            let src = this.get_selected_region()
 
             let heuristic = (dst) => {
                 let a = (dst.y - src.y) * delta_y + (dst.x - src.x) * delta_x
@@ -376,7 +614,8 @@ export function encounter_component(game) {
                 return a / (a * a + b * b)
             }
 
-            let _selectables = this.regions.filter((r) => r.selectable && heuristic(r) > 0)
+            const context = this.get_context()
+            let _selectables = this.regions.filter((r) => r.selectable(context) && heuristic(r) > 0)
 
             if (_selectables.length > 0)
             {
@@ -389,15 +628,29 @@ export function encounter_component(game) {
                 return undefined
             }
         },
+        // asks the player to select a target, or returns null if not selected.
+        select_target: async function(descriptor) {
+            let possible_targets = collect_targets(this.game.state, descriptor)
+
+            // TODO: selection for these?
+            if (descriptor == "player") return this.game.state.player
+            if (descriptor == "all enemies") return "all enemies"
+
+            return await this.push_context({
+                type: 'select-target',
+                can_cancel: true,
+                possible_targets: possible_targets
+            })
+        },
         render: function(program) {
             // force iff the screen dimensions have changed
             let full_refresh = this.refresh_dimensions()
             this.refresh_state(full_refresh)
 
-            // remove current selection if region no longe exists
-            if (!this.regions.includes(this.selected_region))
+            // remove current selection if region no longer exists
+            if (!this.regions.includes(this.get_selected_region()))
             {
-                this.selected_region = null
+                this.set_selected_region(null)
             }
 
             this.refresh_info_panel(full_refresh)
@@ -418,7 +671,7 @@ export function encounter_component(game) {
             }
         },
         refresh_info_panel: function(force=false) {
-            let info = this.selected_region ? this.selected_region.get_info() : null
+            let info = this.get_selected_region() ? this.get_selected_region().get_info() : null
             if (info != this.display_info || this.display_info == null || force)
             {
                 this.display_info = info
@@ -428,7 +681,6 @@ export function encounter_component(game) {
 
                 // display this info
                 this.regions.push(new Region({
-                    selectable: false,
                     owner: "info",
                     root: this,
                     info: this.display_info,

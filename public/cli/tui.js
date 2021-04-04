@@ -65,13 +65,15 @@ export class TUI {
 
         // things to be rendered
         this.components = []
+        this.upcoming_render = null
         program.alternateBuffer();
         program.clear();
         program.hideCursor();
         let _this = this
         program.on("resize", (data) => {
             try {
-                _this.render()
+                this.program.clear()
+                _this.mark_dirty()
             }
             catch (e)
             {
@@ -121,7 +123,7 @@ export class TUI {
         this.components.push(component);
         this.sort_components();
         component.onAdd()
-        this.render()
+        this.mark_dirty()
         return new Promise((resolve, reject) => {
             component.tui_resolve = resolve
         })
@@ -159,6 +161,18 @@ export class TUI {
             }
             return a.length - b.length
         })
+    }
+
+    // queues a render onto the event loop
+    mark_dirty() {
+        if (!this.upcoming_render)
+        {
+            this.upcoming_render = true
+            setTimeout(() => {
+                this.upcoming_render = false
+                this.render()
+            }, 0)
+        }
     }
 
     render() {

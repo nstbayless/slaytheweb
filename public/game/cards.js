@@ -20,7 +20,7 @@ this.card = {
 	name: enum,
 	type: enum, // [ATTACK, SKILL, POWER, STATUS, CURSE]
 	energy: number,
-	target: enum, // [player, enemy, all enemies] @todo? [NONE, SELF_AND_ENEMY, ALL]
+	target: enum, // ['player', 'enemy', 'all enemies'] @todo? [NONE, SELF_AND_ENEMY, ALL]
 	description: string,
 	powers: {
 		regen: number,

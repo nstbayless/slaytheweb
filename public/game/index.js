@@ -43,7 +43,7 @@ export default function createNewGame() {
 			const signalees = this.signalees
 			this.signalees = []
 			setTimeout(() => {
-				for (cb of signalees)
+				for (let cb of signalees)
 				{
 					cb()
 				}

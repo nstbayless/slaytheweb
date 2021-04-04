@@ -151,6 +151,13 @@ function testWhite(x) {
     return white.test(x.charAt(0));
 };
 
+export function exit_with_message(tui, message="", code=0)
+{
+    tui.end()
+    console.log(message)
+    process.exit(code)
+}
+
 // convenience
 export let
     $p = promisify,

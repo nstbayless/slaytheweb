@@ -17,6 +17,7 @@ function node_remap(c)
 
 export function dungeon_component(game) {
     return {
+        name: "dungeon",
         depth: [TUI.BASE_DEPTH],
         width: 10, // component width
         game: game,

@@ -4,7 +4,7 @@ import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode,
 import {createCard, getCardRewards} from './../game/cards.js'
 import { dungeon_component } from './dungeon.js'
 import {TUI}  from './tui.js'
-import {$d, $middle_element, _, boxline, $pm, async_sleep} from './util.js'
+import {$d, $middle_element, _, boxline, $pm, async_sleep, exit_with_message} from './util.js'
 import { encounter_component } from './encounter.js'
 
 export default class App {
@@ -31,24 +31,39 @@ export default class App {
             // set the correct base component UI
             // (TODO: dungeon map should be considered one of these as well.)
             this.set_base_component()
+
+            // 'execute' base component (wait for it to supply an action)
+            if (this.base_component)
+            {
+                this.tui.mark_dirty()
+                let next_action = await this.base_component.exec()
+                if (next_action !== null)
+                {
+                    this.tui.program.clear()
+                    this.game.enqueue(next_action)
+                }
+            }
         }
     }
 
     // sets base screen (combat, merchant, etc.)
     async set_base_component() {
-        if (this.base_component)
+        
+        let new_component = this.create_base_component(this.base_component)
+        if (new_component != this.base_component)
         {
-            this.tui.detach(this.base_component)
+            this.tui.remove_component(this.base_component)
+            this.base_component = new_component
+            this.tui.add_component(this.base_component)
         }
-        this.base_component = this.create_base_component()
-        this.tui.add_component(this.base_component)
     }
 
     // this depends on the current room type (combat, merchant, etc.)
-    create_base_component() {
+    create_base_component(previous) {
         let current_room_type = getCurrRoom(this.game.state).type
         if (current_room_type == "monster")
         {
+            if (previous && previous.name == "encounter") return previous
             return encounter_component(this.game)
         }
         else
