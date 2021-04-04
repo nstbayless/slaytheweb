@@ -1,5 +1,5 @@
 import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
-import {$d, $middle_element, _, boxline} from './util.js'
+import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines} from './util.js'
 import { TUI } from './tui.js'
 import { globals, g } from './constants.js'
 
@@ -12,24 +12,39 @@ class Region {
         this.h = undefined
         this.selectable = true
         this.render = (program) => {}
+        this.get_info = () => null
         _.extend(this, props)
     }
 }
 
-function draw_hp_bar(program, hp, maxhp, width=g.MAX_CREATURE_NAME_LENGTH)
+function draw_hp_bar_and_block(program, props)
+{
+    if (props.block && props.block != 0)
+    {
+        // alts: 🛡⛉
+        let str = "⛊" + Math.floor(props.block) + " "
+        if (program.move(props.x - str.length, props.y))
+        {
+            program.write(str)
+        }
+    }
+    program.move(props.x, props.y)
+    draw_hp_bar(program, props.hp, props.maxhp, props.width, (props.block > 0) ? g.colors.block : g.colors.hp)
+}
+
+function draw_hp_bar(program, hp, maxhp, width, color)
 {
     program.write("[")
     const bar_width = width - 2
 
     let text = _.pad(`${Math.floor(hp)}/${Math.floor(maxhp)}`, bar_width)
-    let hp_width = (hp - 3.4) / maxhp * bar_width
+    let hp_width = (hp) / maxhp * bar_width
     let hpcol = 0xA0
 
     for (let i = 0; i < bar_width; ++i)
     {
         let p = _.clamp(hp_width - i, 0, 1)
-        let col = Math.floor(hpcol * p)
-        let colstr = `#${_.padStart(col.toString(16), 2, '0')}0000`
+        let colstr = blend_colors(color, "#000000", 1 - p)
         program.bg(colstr)
         program.write(text.substr(i, 1))
     }
@@ -52,21 +67,10 @@ export function encounter_component(game) {
         w: undefined,
         h: undefined,
         selected_region: null,
+        display_info: null,
         // refreshes UI state which depends on the game state.
         // (this does not include e.g. cursor position)
-        refresh_state: function() {
-            // update screen dimensions and force a full refresh
-            // if needed.
-            const next_w = Math.max(this.tui.program.cols, g.MIN_CLI_WIDTH)
-            const next_h = Math.max(this.tui.program.rows, g.MIN_CLI_HEIGHT)
-            let force = false
-            if (next_w != this.w || next_h != this.h)
-            {
-                this.w = next_w
-                this.h = next_h
-                force = true
-            }
-
+        refresh_state: function(force=false) {
             // refresh regions
             if (this.state !== this.game.state || force)
             {
@@ -131,11 +135,23 @@ export function encounter_component(game) {
                         let name = $d(this.monster.name, `monster ${this.i}`)
 
                         // write name
-                        program.move(x, y)
-                        program.write(_.pad(name, g.MIN_ENEMY_ZONE_WIDTH))
+                        program.move(x + Math.floor(g.MIN_ENEMY_ZONE_WIDTH / 2 - name.length/2), y)
+                        if (this.root.selected_region === this)
+                        {
+                            program.bg(g.colors.hover)
+                        }
+                        program.write(name)
+                        program.resetcol()
                         let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH
-                        program.move(x + Math.floor(g.MIN_ENEMY_ZONE_WIDTH / 2 - hpbarwidth/2), ++y) // center in x
-                        draw_hp_bar(program, monster.currentHealth, monster.maxHealth, hpbarwidth)
+                        y += 1;
+                        draw_hp_bar_and_block(program, {
+                            hp: monster.currentHealth,
+                            maxhp:monster.maxHealth,
+                            block: monster.block,
+                            width:hpbarwidth,
+                            x: x + Math.floor(g.MIN_ENEMY_ZONE_WIDTH / 2 - hpbarwidth / 2),
+                            y: y
+                        })
                         program.move(x, ++y)
                         program.write("(status...)")
                     }
@@ -233,6 +249,13 @@ export function encounter_component(game) {
                         y: y,
                         h: 1,
                         w: g.CARD_SLOT_WIDTH,
+                        get_info: function() {
+                            return {
+                                header: `(${card.energy}) ${card.name}`,
+                                subheader: `(${card.type})`,
+                                contents: card.description
+                            }
+                        },
                         render: function(program)
                         {
                             const player_energy = this.root.state.player.currentEnergy
@@ -291,15 +314,93 @@ export function encounter_component(game) {
             }
         },
         onAdd: function() {
-            this.refresh_state()
+            this.refresh_state(this.refresh_dimensions())
+        },
+        refresh_dimensions() {
+            // update screen dimensions and force a full refresh
+            // if needed.
+            const next_w = Math.max(this.tui.program.cols, g.MIN_CLI_WIDTH)
+            const next_h = Math.max(this.tui.program.rows, g.MIN_CLI_HEIGHT)
+            if (next_w != this.w || next_h != this.h)
+            {
+                this.w = next_w
+                this.h = next_h
+                return true
+            }
+            return false
         },
         onKeypress: function(event) {
+
+            // TODO: consider not allowing keypresses if state queue is not empty.
+
+            let delta_x = 0, delta_y = 0
+            if (event.full == "up") delta_y--
+            if (event.full == "down") delta_y++
+            if (event.full == "left") delta_x--
+            if (event.full == "right") delta_x++
+
+            // adjust selection
+            if (delta_x != 0 || delta_y != 0)
+            {
+                let new_selection = this.selected_region
+                if (this.regions.includes(this.selected_region))
+                {
+                    new_selection = this.get_new_selection(delta_x, delta_y)
+                }
+                else
+                {
+                    // default selection
+                    let selectable_regions = this.regions.filter((region) => region.selectable)
+                    if (selectable_regions.length > 0)
+                    {
+                        new_selection = selectable_regions[0]
+                    }
+                }
+
+                if (new_selection && new_selection != this.selected_region)
+                {
+                    this.selected_region = new_selection
+                }
+            }
             // steal keypress
             return true
         },
+        get_new_selection: function (delta_x, delta_y)
+        {
+            let src = this.selected_region
+
+            let heuristic = (dst) => {
+                let a = (dst.y - src.y) * delta_y + (dst.x - src.x) * delta_x
+                let b = (dst.y - src.y) * delta_x + (dst.x - src.x) * delta_y
+                if (a == 0 && b == 0) return -1
+                return a / (a * a + b * b)
+            }
+
+            let _selectables = this.regions.filter((r) => r.selectable && heuristic(r) > 0)
+
+            if (_selectables.length > 0)
+            {
+                _selectables.sort((a, b) => heuristic(b) - heuristic(a))
+                return _selectables[0]
+            }
+            else
+            {
+                // no good new selection
+                return undefined
+            }
+        },
         render: function(program) {
             // force iff the screen dimensions have changed
-            this.refresh_state()
+            let full_refresh = this.refresh_dimensions()
+            this.refresh_state(full_refresh)
+
+            // remove current selection if region no longe exists
+            if (!this.regions.includes(this.selected_region))
+            {
+                this.selected_region = null
+            }
+
+            this.refresh_info_panel(full_refresh)
 
             // render each regions
             for (let region of this.regions)
@@ -314,6 +415,74 @@ export function encounter_component(game) {
                     continue
                 }
                 region.render(program)
+            }
+        },
+        refresh_info_panel: function(force=false) {
+            let info = this.selected_region ? this.selected_region.get_info() : null
+            if (info != this.display_info || this.display_info == null || force)
+            {
+                this.display_info = info
+
+                // remove all "info"-region objects
+                this.regions = this.regions.filter((region) => region.owner !== "info")
+
+                // display this info
+                this.regions.push(new Region({
+                    selectable: false,
+                    owner: "info",
+                    root: this,
+                    info: this.display_info,
+                    x: this.w - this.info_tab_width,
+                    y: 0,
+                    h: this.h,
+                    w: this.info_tab_width,
+                    render: function(program) {
+                        // divider line
+                        for (let y = this.y; y < this.h + this.y; ++y)
+                        {
+                            program.move(this.x, y)
+                            program.write("║")
+                        }
+
+                        let y = this.y
+                        let x = this.x + 2
+                        let xwidth = this.w - 2
+                        let infos = this.info ? [this.info] : []
+
+                        // TODO: recursively expand info defined terms
+
+                        function write_text(text)
+                        {
+                            let lines = wordWrapLines(text, xwidth)
+                            for (let line of lines)
+                            {
+                                program.move(x, y++)
+                                program.write(line)
+                            }
+                        }
+
+                        // display all infos
+                        for (let info of infos)
+                        {
+                            program.sgr('bold')
+                            write_text($d(info.header, "[missing header]"))
+                            program.sgr('normal')
+                            if (info.subheader)
+                            {
+                                program.fg("gray")
+                                write_text(info.subheader)
+                                program.resetcol()
+                            }
+                            
+                            y++ // skip line
+
+                            if (info.contents !== undefined)
+                            {
+                                write_text(info.contents)
+                            }
+                        }
+                    }
+                }))
             }
         }
     }

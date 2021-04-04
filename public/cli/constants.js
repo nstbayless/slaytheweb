@@ -24,7 +24,9 @@ const globals = {
     colors: {
         energy: "#309042",
         energy_depleted: "#304032",
-        hover: "#706030"
+        hover: "#706000",
+        hp: "#900000",
+        block: "#0000d0"
     }
 }
 const g = globals
