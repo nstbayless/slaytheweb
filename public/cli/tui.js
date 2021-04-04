@@ -7,8 +7,8 @@ export class Component {
     constructor(props)
     {
         this.depth = [TUI.MODAL_DEPTH, global_modal_component_next_depth--]
-        this.render = () => {}
-        this.onKeypress = () => false
+        this.render = (program) => {}
+        this.onKeypress = (event) => false
         this.onClose = () => undefined
         this.onAdd = () => undefined
         _.extend(this, props)
@@ -68,18 +68,17 @@ export class TUI {
         program.alternateBuffer();
         program.clear();
         program.hideCursor();
-        program.on("resize", (err, e) => {
-            if (err) return
+        let _this = this
+        program.on("resize", (data) => {
             try {
-                this.render()
+                _this.render()
             }
             catch (e)
             {
-                this.end()
+                _this.end()
                 console.error(e, e.stack);
                 process.exit(1)
             }
-                
         })
         program.on("keypress", (c, e) => {
             e.char = c

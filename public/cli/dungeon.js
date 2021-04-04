@@ -1,5 +1,6 @@
 import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
 import {$d, $middle_element, _, boxline} from './util.js'
+import { TUI } from './tui.js'
 
 function node_remap(c)
 {
@@ -14,9 +15,9 @@ function node_remap(c)
     }[c], c)
 }
 
-export function dungeon_component(tui, game) {
+export function dungeon_component(game) {
     return {
-        depth: [tui.BASE_DEPTH],
+        depth: [TUI.BASE_DEPTH],
         width: 10, // component width
         game: game,
         scroll: 0,
@@ -114,7 +115,7 @@ export function dungeon_component(tui, game) {
         },
         render: function(program, props) {
             let px = Math.floor(props.w / 2 - this.width / 2)
-            let py = tui.content_margin_top
+            let py = this.tui.content_margin_top
             program.move(0, 0)
             program.move(px, py)
             let state = this.game.state

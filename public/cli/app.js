@@ -5,6 +5,7 @@ import {createCard, getCardRewards} from './../game/cards.js'
 import { dungeon_component } from './dungeon.js'
 import {TUI}  from './tui.js'
 import {$d, $middle_element, _, boxline, $pm, async_sleep} from './util.js'
+import { encounter_component } from './encounter.js'
 
 export default class App {
     constructor(props) {
@@ -17,7 +18,7 @@ export default class App {
     }
 
     async loop() {
-        let move = await this.tui.add_component(dungeon_component(this.tui, this.game))
+        let move = await this.tui.add_component(dungeon_component(this.game))
         this.game.enqueue({type: 'move', move})
         while (true)
         {
@@ -30,11 +31,6 @@ export default class App {
             // set the correct base component UI
             // (TODO: dungeon map should be considered one of these as well.)
             this.set_base_component()
-
-            // temporary: end game now.
-            this.tui.end()
-            console.log(action)
-            process.exit(0)
         }
     }
 
@@ -44,15 +40,16 @@ export default class App {
         {
             this.tui.detach(this.base_component)
         }
-        this.base_component = create_base_component()
-        this.tui.attach(this.base_component)
+        this.base_component = this.create_base_component()
+        this.tui.add_component(this.base_component)
     }
 
     // this depends on the current room type (combat, merchant, etc.)
-    async create_base_component() {
+    create_base_component() {
         let current_room_type = getCurrRoom(this.game.state).type
         if (current_room_type == "monster")
         {
+            return encounter_component(this.game)
         }
         else
         {
@@ -84,6 +81,8 @@ export default class App {
         return this.game.past.peek()
     }
 }
+
+console.log("starting...")
 
 let app = new App()
 
