@@ -18,4 +18,7 @@ export default class Queue {
 		else
 			return undefined
 	}
+	empty() {
+		return this.list.length == 0
+	}
 }

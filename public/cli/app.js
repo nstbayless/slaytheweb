@@ -60,7 +60,10 @@ export default class App {
 
     // this depends on the current room type (combat, merchant, etc.)
     create_base_component(previous) {
-        let current_room_type = getCurrRoom(this.game.state).type
+        if (isCurrentRoomCompleted(this.game.state))
+        {
+            return dungeon_component(this.game)
+        }
         if (current_room_type == "monster")
         {
             if (previous && previous.name == "encounter") return previous

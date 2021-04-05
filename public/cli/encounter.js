@@ -1,4 +1,4 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent} from '../game/utils.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters} from '../game/utils.js'
 import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
 import { TUI } from './tui.js'
 import { globals, g } from './constants.js'
@@ -73,7 +73,7 @@ function get_intent_descriptor(intent)
 // description: 'enemy', 'player', 'all enemies', etc.
 function collect_targets(state, targets_desc)
 {
-    let monsters = getCurrRoom(state).monsters
+    let monsters = getAliveMonsters(state)
     let player = state.player
     if (targets_desc == 'all enemies')
     {
@@ -220,7 +220,7 @@ export function encounter_component(game) {
                 this.refresh_hand_regions(force)
             }
 
-            let monsters = getCurrRoom(this.state).monsters
+            let monsters = getAliveMonsters(this.state)
             if (this.monsters !== monsters || force)
             {
                 this.monsters = monsters

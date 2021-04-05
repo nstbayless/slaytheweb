@@ -56,6 +56,10 @@ export function getCurrRoom(state) {
 	return node.room
 }
 
+export function getAliveMonsters(state) {
+	return getCurrRoom(state).monsters.filter((monster) => monster.currentHealth > 0)
+}
+
 // returns monster from current room's monsters by ID
 export function getMonsterById(state, id)
 {
@@ -105,8 +109,8 @@ export function cardHasValidTarget(cardTarget, targetString) {
 
 export function isRoomCompleted(room) {
 	if (room.type === 'monster') {
-		const deadMonsters = room.monsters.filter((m) => m.currentHealth < 1)
-		return deadMonsters.length === room.monsters.length
+		const aliveMonsters = room.monsters.filter((m) => m.currentHealth > 0)
+		return aliveMonsters.length == 0
 	} else if (room.type === 'campfire') {
 		return room.choice === 'rest' || Boolean(room.reward)
 	} else if (room.type === 'start') {
