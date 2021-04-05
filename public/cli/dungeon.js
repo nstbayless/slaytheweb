@@ -21,6 +21,7 @@ export function dungeon_component(game) {
         depth: [TUI.BASE_DEPTH],
         width: 10, // component width
         game: game,
+        _resolve: null,
         scroll: 0,
         select: -1,
         onAdd: function() {
@@ -102,17 +103,26 @@ export function dungeon_component(game) {
             {
                 let graph = this.game.state.dungeon.graph
                 let next_y = this.game.state.dungeon.y + 1
-                if (next_y < graph.length && this.select >= 0 && this.select < graph[next_y].length)
+                if (next_y < graph.length && this.select >= 0 && this.select < graph[next_y].length && this._resolve)
                 {
-                    this.close(
+                    this._resolve(
                         {
-                            "x": this.select,
-                            "y": next_y
+                            type: 'move',
+                            move: {
+                                "x": this.select,
+                                "y": next_y
+                            }
                         }
                     )
                     return true
                 }
             }
+        },
+        exec: async function exec() {
+            let _this = this
+            return await new Promise((resolve, reject) => {
+                _this._resolve = resolve
+            })
         },
         render: function(program, props) {
             let px = Math.floor(props.w / 2 - this.width / 2)

@@ -9,6 +9,8 @@
             "request": "launch",
             "name": "yarn cli",
             "runtimeExecutable": "yarn",
+            "internalConsoleOptions": "openOnSessionStart",
+            "console": "none",
             "cwd": "${workspaceFolder}",
             "runtimeArgs": ["cli:debug"],
             "port": 5858

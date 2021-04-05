@@ -3,7 +3,7 @@ import createNewGame from '../game/index.js'
 import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
 import {createCard, getCardRewards} from './../game/cards.js'
 import { dungeon_component } from './dungeon.js'
-import {TUI}  from './tui.js'
+import {TUI, Component}  from './tui.js'
 import {$d, $middle_element, _, boxline, $pm, async_sleep, exit_with_message} from './util.js'
 import { encounter_component } from './encounter.js'
 
@@ -18,31 +18,41 @@ export default class App {
     }
 
     async loop() {
-        let move = await this.tui.add_component(dungeon_component(this.game))
-        this.game.enqueue({type: 'move', move})
         while (true)
         {
-            // apply the next action on the queue.
-            let action = await this.dequeue()
+            let action = null
 
             // ensures we are at the top of the event loop (prevents any accidental stack overflows)
             await async_sleep(0)
 
-            // set the correct base component UI
-            // (TODO: dungeon map should be considered one of these as well.)
+            // replace base component
             this.set_base_component()
 
-            // 'execute' base component (wait for it to supply an action)
+            // enqueue action from base component
             if (this.base_component)
             {
-                this.tui.mark_dirty()
+                // for some reason the dungeon component works differently (TODO: fix this bug...)
                 let next_action = await this.base_component.exec()
+
                 if (next_action !== null)
                 {
-                    this.tui.program.clear()
                     this.game.enqueue(next_action)
                 }
+
+                if (!this.game.future.empty())
+                {
+                    action = this.game.dequeue()
+                }
             }
+            else
+            {
+                throw "no base component could be constructed for the current state."
+            }
+
+            // we now have an action -- do something with it..?
+
+            // render to reflect the updated state
+            this.tui.mark_dirty()
         }
     }
 
@@ -53,15 +63,17 @@ export default class App {
         if (new_component != this.base_component)
         {
             this.tui.remove_component(this.base_component)
-            this.base_component = new_component
+            this.base_component = (new_component instanceof Component) ? new_component : new Component(new_component)
             this.tui.add_component(this.base_component)
         }
     }
 
     // this depends on the current room type (combat, merchant, etc.)
     create_base_component(previous) {
+        let current_room_type = getCurrRoom(this.game.state).type
         if (isCurrentRoomCompleted(this.game.state))
         {
+            if (previous && previous.name == "dungeon") return previous
             return dungeon_component(this.game)
         }
         if (current_room_type == "monster")

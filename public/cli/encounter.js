@@ -3,6 +3,8 @@ import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, e
 import { TUI } from './tui.js'
 import { globals, g } from './constants.js'
 
+let SELECTABLE_AND_DEFAULT = 3
+
 class Region {
     constructor(props) {
         this.owner = null
@@ -205,11 +207,19 @@ export function encounter_component(game) {
         },
         get_default_selected_region: function(context)
         {
-            for (let region of this.regions)
+            let selectable_regions = this.regions.filter((region) => region.selectable(context))
+            if (selectable_regions.length > 0)
             {
-                if (region.selectable(context)) return region
+                // get "most" selectable -- this is the default.
+                selectable_regions.sort(
+                    (a, b) => b.selectable(context) - a.selectable(context)
+                )
+                return selectable_regions[0]
             }
-            return null
+            else
+            {
+                return null
+            }
         },
         // recreate all regions from scratch
         refresh_regions(force=false)
@@ -524,6 +534,7 @@ export function encounter_component(game) {
             let left = 5
             let x = left
             let y = top + 1
+            let i = 0
             for (let card of this.hand)
             {
                 this.regions.push(
@@ -534,8 +545,15 @@ export function encounter_component(game) {
                         x: x,
                         y: y,
                         h: 1,
+                        i: i++,
                         w: g.CARD_SLOT_WIDTH,
-                        selectable: (context) => context.type == "turn-action",
+                        selectable: function(context)
+                        {
+                            if (context.type == "turn-action")
+                            {
+                                return (this.i == 0) ? SELECTABLE_AND_DEFAULT : true
+                            }
+                        },
                         get_info: function() {
                             return {
                                 header: `(${card.energy}) ${card.name}`,
@@ -751,9 +769,10 @@ export function encounter_component(game) {
             this.refresh_state(full_refresh)
 
             // remove current selection if region no longer exists
-            if (!this.regions.includes(this.get_selected_region()))
+            // replace it with the default
+            if (!this.get_selected_region() || !this.regions.includes(this.get_selected_region()))
             {
-                this.set_selected_region(null)
+                this.set_selected_region(this.get_default_selected_region(this.get_context()))
             }
 
             this.refresh_info_panel(full_refresh)
