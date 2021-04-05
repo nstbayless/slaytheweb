@@ -1,4 +1,4 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById} from '../game/utils.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent} from '../game/utils.js'
 import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
 import { TUI } from './tui.js'
 import { globals, g } from './constants.js'
@@ -26,6 +26,47 @@ function get_target_string(state, target)
     let idx = monsters.indexOf(target)
     if (idx < 0) throw "monster not found"
     return `enemy${idx}`
+}
+
+function get_intent_descriptor(intent)
+{
+    if (intent.damage)
+    {
+        let sym = "👊"
+        // 🔪
+        if (intent.damage >= 5) sym = '🗡'
+        if (intent.damage >= 20) sym = '⚔'
+        return {
+            brief: `${sym} ${intent.damage}`,
+            color: "red",
+            info: {
+                header: "Attack",
+                contents: "%{name} will attack for %{damage} damage"
+            }
+        }
+    }
+
+    if (intent.block)
+    {
+        return {
+            brief: `⛉ ${intent.block}`,
+            color: g.colors.block,
+            info: {
+                header: "Defend",
+                contents: "%{name} will block for %{damage} points"
+            }
+        }
+    }
+
+    // unknown
+    return {
+        brief: "?",
+        color: "#a08000",
+        info: {
+            header: "Unknown",
+            contents: "%{name}'s intention is unknown"
+        }
+    }
 }
 
 // finds all targets matching the given description.
@@ -311,6 +352,10 @@ export function encounter_component(game) {
                         // otherwise, not hoverable
                         return false
                     },
+                    get_info: function() {
+                        let monster = getMonsterById(this.root.game.state, this.monster_id)
+                        return get_intent_descriptor(getMonsterIntent(monster)).info
+                    },
                     activate: function(context) {
                         if (context.type == "select-target")
                         {
@@ -326,14 +371,24 @@ export function encounter_component(game) {
                         if (!monster) return
                         let name = $d(monster.name, `monster ${this.i}`)
 
+                        let intent_desc = get_intent_descriptor(getMonsterIntent(monster))
+
                         // write name
-                        program.move(x + Math.floor(this.width / 2 - name.length/2), y)
+                        let name_x = x + Math.floor(this.width / 2 - name.length/2)
+                        program.move(name_x, y)
                         if (this.root.get_selected_region() === this)
                         {
                             program.bg(this.root.get_context().hover_color)
                         }
                         program.write(name)
                         program.resetcol()
+
+                        // write intent
+                        program.move(name_x - intent_desc.brief.length - 1, y)
+                        program.fg($d(intent_desc.color, "#d0d0d0"))
+                        program.write(intent_desc.brief)
+                        program.resetcol()
+
                         let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH
                         y += 1;
                         draw_hp_bar_and_block(program, {
@@ -534,7 +589,7 @@ export function encounter_component(game) {
                             program.resetcol()
                         },
                         activate: async function(context) {
-                            if (context.type == "turn-action")
+                            if (context.type == "turn-action" && this.root.game.state.player.currentEnergy >= card.energy)
                             {
                                 let target = await this.root.select_target(card.target)
                                 if (target)

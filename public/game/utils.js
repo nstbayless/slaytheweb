@@ -66,6 +66,12 @@ export function getMonsterById(state, id)
 	return null
 }
 
+export function getMonsterIntent(monster)
+{
+	if (monster.intents.length <= monster.nextIntent) return {}
+	return monster.intents[monster.nextIntent]
+}
+
 // Returns an array of targets (player or monsters) in the current room.
 // The "target" argument must be either "player", "enemyx" (where x is the index) or "all enemies"
 export function getTargets(state, targetString) {
