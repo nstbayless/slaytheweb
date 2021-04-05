@@ -424,6 +424,47 @@ export function encounter_component(game) {
                 })
             )
 
+            // end turn region
+            this.regions.push(
+                new Region({
+                    owner: "hand",
+                    root: this,
+                    x: width_available - 1,
+                    y: this.h - 4,
+                    w: 1,
+                    h: 4,
+                    selectable: (context) => context.type == "turn-action",
+                    render: function(program)
+                    {
+                        let x = this.x, y = this.y
+                        program.sgr("bold")
+                        if (this.root.get_selected_region() == this)
+                        {
+                            program.fg("white")
+                            program.bg(this.root.get_context().hover_color)
+                        }
+                        else
+                        {
+                            program.bg("#0000c0")
+                            program.fg("#c0c0c0")
+                        }
+                        for (let c of ["E", "N", "D", "↺"])
+                        {
+                            program.move(x, y++)
+                            program.write(c)
+                        }
+                        program.resetcol()
+                        program.sgr("normal")
+                    },
+                    activate: function(context)
+                    {
+                        this.root.pop_context({
+                            type: "end-turn"
+                        })
+                    }
+                })
+            )
+
             // cards
             let left = 5
             let x = left
@@ -462,7 +503,7 @@ export function encounter_component(game) {
                             program.move(this.x, this.y)
 
                             // write card energy
-                            if (player_energy < card.energy)
+                            if (player_energy >= card.energy)
                             {
                                 program.fg(g.colors.energy)
                             }
@@ -528,13 +569,16 @@ export function encounter_component(game) {
                 type: 'turn-action'
             })
 
-            if (turn_action.type == "play-card")
-            {
+            if (turn_action.type == "play-card") {
                 // enqueue an action.
                 return {
                     type: "playCard",
                     card: turn_action.card,
                     target: get_target_string(this.game.state, turn_action.target)
+                }
+            } else if (turn_action.type == "end-turn") {
+                return {
+                    type: "endTurn"
                 }
             }
 
@@ -688,7 +732,7 @@ export function encounter_component(game) {
                     owner: "info",
                     root: this,
                     info: this.display_info,
-                    x: this.w - this.info_tab_width,
+                    x: this.w - this.info_tab_width - 1,
                     y: 0,
                     h: this.h,
                     w: this.info_tab_width,
