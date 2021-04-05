@@ -194,7 +194,7 @@ export function encounter_component(game) {
         refresh_players_region(force=false)
         {
             // remove all "player"-region objects
-            this.regions = this.regions.filter((region) => region.owner !== "players")
+            this.remove_regions("players")
 
             const 
                 left = 0,
@@ -268,7 +268,7 @@ export function encounter_component(game) {
         refresh_monsters_regions(force=false)
         {
             // remove all "monster"-region objects
-            this.regions = this.regions.filter((region) => region.owner !== "monster")
+            this.remove_regions("monsters")
 
             // convenience
             const right = this.w - this.info_tab_width - 1
@@ -356,7 +356,7 @@ export function encounter_component(game) {
         refresh_hand_regions(force=false)
         {
             // remove all "hand"-region objects
-            this.regions = this.regions.filter((region) => region.owner !== "hand")
+            this.remove_regions('hand')
 
             const width_available = this.w - this.info_tab_width - 1
             const cards_per_row = Math.ceil(width_available / g.CARD_SLOT_WIDTH)
@@ -628,6 +628,10 @@ export function encounter_component(game) {
                 return undefined
             }
         },
+        remove_regions: function(owner)
+        {
+            this.regions = this.regions.filter((region) => region.owner !== owner)
+        },
         // asks the player to select a target, or returns null if not selected.
         select_target: async function(descriptor) {
             let possible_targets = collect_targets(this.game.state, descriptor)
@@ -677,7 +681,7 @@ export function encounter_component(game) {
                 this.display_info = info
 
                 // remove all "info"-region objects
-                this.regions = this.regions.filter((region) => region.owner !== "info")
+                this.remove_regions("info")
 
                 // display this info
                 this.regions.push(new Region({
