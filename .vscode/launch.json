@@ -10,7 +10,21 @@
             "name": "yarn cli",
             "runtimeExecutable": "yarn",
             "internalConsoleOptions": "openOnSessionStart",
-            "console": "none",
+            "console": "externalTerminal",
+            "cwd": "${workspaceFolder}",
+            "runtimeArgs": ["cli:debug"],
+            "port": 5858
+        },
+        {
+            "name": "godmode",
+            "type": "node",
+            "request": "launch",
+            "env": {
+                "STW_GODMODE": 1
+            },
+            "internalConsoleOptions": "openOnSessionStart",
+            "runtimeExecutable": "yarn",
+            "console": "externalTerminal",
             "cwd": "${workspaceFolder}",
             "runtimeArgs": ["cli:debug"],
             "port": 5858

@@ -31,7 +31,6 @@ export default class App {
             // enqueue action from base component
             if (this.base_component)
             {
-                // for some reason the dungeon component works differently (TODO: fix this bug...)
                 let next_action = await this.base_component.exec()
 
                 if (next_action !== null)
@@ -80,6 +79,11 @@ export default class App {
         {
             if (previous && previous.name == "encounter") return previous
             return encounter_component(this.game)
+        }
+        else if (current_room_type == "campfire")
+        {
+            if (previous && previous.name == "campfire") return previous
+            return campfire_component(this.game)
         }
         else
         {

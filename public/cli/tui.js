@@ -4,20 +4,21 @@ import {$p, $pm, $d, _, $remove} from "./util.js"
 let global_modal_component_next_depth = 0
 
 export class Component {
-    constructor(props)
+    constructor(props=null)
     {
-        this.depth = [TUI.MODAL_DEPTH, global_modal_component_next_depth--]
-        this.render = (program) => {}
-        this.onKeypress = (event) => false
-        this.onClose = () => undefined
-        this.onAdd = () => undefined
-        _.extend(this, props)
+        if (props)
+        {
+            _.extend(this, props)
+        }
 
-        // bind 'this' to be accessible in methods provided
-        this.onClose = this.onClose.bind(this)
-        this.onKeypress = this.onKeypress.bind(this)
-        this.render = this.render.bind(this)
-        this.onAdd = this.onAdd.bind(this)
+        // set depth to default if not provided
+        this.depth = $d(this.depth, [TUI.MODAL_DEPTH, global_modal_component_next_depth--])
+
+        // bind 'this' to be accessible in methods provided, and provide defaults.
+        this.render = $d(this.render, (program) => {}).bind(this)
+        this.onKeypress = $d(this.onKeypress, (event) => false).bind(this)
+        this.onClose = $d(this.onClose, () => undefined).bind(this)
+        this.onAdd = $d(this.onAdd, ()=>{}).bind(this)
     }
 
     close(exitvalue)

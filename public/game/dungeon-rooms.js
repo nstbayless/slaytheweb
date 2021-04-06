@@ -1,4 +1,4 @@
-import {uuid} from './utils.js'
+import {isGodMode, uuid} from './utils.js'
 import {shuffle, range} from './utils.js'
 
 export function StartRoom() {
@@ -42,6 +42,13 @@ export function Monster(props = {}) {
 			}
 			return intent
 		})
+	}
+
+	if (isGodMode())
+	{
+		props.hp = 1
+		props.currentHealth = 1
+		props.block = 0
 	}
 
 	return {
