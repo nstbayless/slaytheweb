@@ -5,7 +5,8 @@ import {createCard, getCardRewards} from './../game/cards.js'
 import { dungeon_component } from './dungeon.js'
 import {TUI, Component}  from './tui.js'
 import {$d, $middle_element, _, boxline, $pm, async_sleep, exit_with_message} from './util.js'
-import { encounter_component } from './encounter.js'
+import { EncounterComponent } from './encounter.js'
+import { CampfireComponent } from './campfire.js'
 
 export default class App {
     constructor(props) {
@@ -78,12 +79,12 @@ export default class App {
         if (current_room_type == "monster")
         {
             if (previous && previous.name == "encounter") return previous
-            return encounter_component(this.game)
+            return new EncounterComponent(this.game)
         }
         else if (current_room_type == "campfire")
         {
             if (previous && previous.name == "campfire") return previous
-            return campfire_component(this.game)
+            return new CampfireComponent(this.game)
         }
         else
         {

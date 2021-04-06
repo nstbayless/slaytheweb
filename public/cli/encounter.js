@@ -645,7 +645,3 @@ export class EncounterComponent extends RegionComponent
         }
     }
 }
-
-export function encounter_component(game) {
-    return new EncounterComponent(game)
-}

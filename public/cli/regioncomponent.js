@@ -80,10 +80,6 @@ export class RegionComponent extends Component
     get_context() {
         if (this.contexts.length == 0) return {type: null}
         let context = this.contexts[this.contexts.length - 1]
-
-        // (paranoia) if context cannot be resolved for some reason,
-        // don't allow it to be accessed at all.
-        if (context._resolve === undefined) return {type: null}
         return context
     }
     get_selected_region()
@@ -241,6 +237,9 @@ export class RegionComponent extends Component
                 this.set_selected_region(new_selection)
             }
         }
+
+        // paranoia -- prevent popping context without resolving its promise.
+        if (!context._resolve) return
 
         // activate selection
         if (event.full == "enter" && selected_region)
