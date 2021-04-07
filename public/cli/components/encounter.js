@@ -1,7 +1,7 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters} from '../game/utils.js'
-import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
-import { TUI } from './tui.js'
-import { globals, g } from './constants.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters, clamp} from '../../game/utils.js'
+import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from '../util.js'
+import { TUI } from '../tui.js'
+import { globals, g } from '../constants.js'
 import { RegionComponent, SELECTABLE_AND_DEFAULT, Region } from './regioncomponent.js'
 
 
@@ -103,7 +103,7 @@ function draw_hp_bar(program, hp, maxhp, width, color)
 
     for (let i = 0; i < bar_width; ++i)
     {
-        let p = _.clamp(hp_width - i, 0, 1)
+        let p = clamp(hp_width - i, 0, 1)
         let colstr = blend_colors(color, "#000000", 1 - p)
         program.bg(colstr)
         program.write(text.substr(i, 1))

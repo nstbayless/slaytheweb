@@ -1,6 +1,6 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
-import {$d, $middle_element, _, boxline} from './util.js'
-import { TUI } from './tui.js'
+import {getCurrMapNode, isRoomCompleted, clamp} from '../../game/utils.js'
+import {$d, $middle_element, _, boxline, keypress_abstract} from '../util.js'
+import { TUI } from '../tui.js'
 
 function node_remap(c)
 {
@@ -64,29 +64,12 @@ export function dungeon_component(game) {
             this.select = $d($middle_element(next_x), -1)
         },
         onKeypress: function(e) {
-            let delta_x = 0
-            if (e.name === "up")
+            let a = keypress_abstract(e)
+            let delta_x = a.delta_x
+            this.scroll += a.delta_y
+            if (a.delta_x != 0)
             {
-                this.scroll--
-                return true
-            }
-            else if (e.name === "down")
-            {
-                this.scroll++
-                return true
-            }
-            else if (e.name == "left")
-            {
-                delta_x = -1
                 this.default_scroll()
-            }
-            else if (e.name == "right")
-            {
-                delta_x = 1
-                this.default_scroll()
-            }
-            if (delta_x != 0)
-            {
                 let next_x = this.get_next_rooms_x()
                 let i = next_x.indexOf(this.select)
                 if (i == -1)
@@ -95,11 +78,15 @@ export function dungeon_component(game) {
                 }
                 else
                 {
-                    this.select = next_x[_.clamp(i + delta_x, 0, next_x.length - 1)]
+                    this.select = next_x[clamp(i + a.delta_x, 0, next_x.length - 1)]
                 }
                 return true
             }
-            if (e.name == "enter")
+            else if (a.delta_y != 0)
+            {
+                return true
+            }
+            if (a.confirm)
             {
                 let graph = this.game.state.dungeon.graph
                 let next_y = this.game.state.dungeon.y + 1

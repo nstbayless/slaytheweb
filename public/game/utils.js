@@ -150,3 +150,8 @@ export function clamp(x, lower, upper) {
 export function assert(condition, message) {
 	if (!condition) throw new Error(message)
 }
+
+// unsigned modulo (always returns least non-negative value in congruence class)
+export function umod(n, m) {
+	return ((n % m) + m) % m
+}

@@ -2,11 +2,11 @@
 import createNewGame from '../game/index.js'
 import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
 import {createCard, getCardRewards} from './../game/cards.js'
-import { dungeon_component } from './dungeon.js'
+import { dungeon_component } from './components/dungeon.js'
 import {TUI, Component}  from './tui.js'
 import {$d, $middle_element, _, boxline, $pm, async_sleep, exit_with_message} from './util.js'
-import { EncounterComponent } from './encounter.js'
-import { CampfireComponent } from './campfire.js'
+import { EncounterComponent } from './components/encounter.js'
+import { CampfireComponent } from './components/campfire.js'
 
 export default class App {
     constructor(props) {

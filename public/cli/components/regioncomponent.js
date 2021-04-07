@@ -1,10 +1,10 @@
 // TUI component class comprising selectable "regions"
 
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters} from '../game/utils.js'
-import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
-import { globals, g } from './constants.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters} from '../../game/utils.js'
+import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message, keypress_direction, keypress_abstract} from '../util.js'
+import { globals, g } from '../constants.js'
 
-import { TUI, Component } from "./tui.js";
+import { TUI, Component } from "../tui.js";
 
 export let SELECTABLE_AND_DEFAULT = 3
 
@@ -208,11 +208,8 @@ export class RegionComponent extends Component
         let selected_region = this.get_selected_region()
 
         // TODO: consider not allowing keypresses if state queue is not empty.
-        let delta_x = 0, delta_y = 0
-        if (event.full == "up") delta_y--
-        if (event.full == "down") delta_y++
-        if (event.full == "left") delta_x--
-        if (event.full == "right") delta_x++
+        let a = keypress_abstract(event)
+        let [delta_x, delta_y] = [a.delta_x, a.delta_y]
 
         // adjust selection
         if (delta_x != 0 || delta_y != 0)
@@ -242,12 +239,12 @@ export class RegionComponent extends Component
         if (!context._resolve) return
 
         // activate selection
-        if (event.full == "enter" && selected_region)
+        if (a.confirm && selected_region)
         {
             selected_region.activate(context)
         }
 
-        if (event.full == "escape" || event.full == "esc")
+        if (a.cancel)
         {
             if (context.can_cancel) this.pop_context()
         }

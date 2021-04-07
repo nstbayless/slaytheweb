@@ -1,5 +1,6 @@
 import {promisify} from "../../node_modules/util/util.js"
 import _ from "../../node_modules/lodash/lodash.js"
+import { clamp } from "../game/utils.js";
 
 export {promisify, _};
 
@@ -86,7 +87,7 @@ export function async_sleep(milliseconds) {
 }
 
 export function interpolate(a, b, p) {
-    p = _.clamp(p, 0, 1)
+    p = clamp(p, 0, 1)
     return a * (1 - p) + b * p
 }
 
@@ -156,6 +157,56 @@ export function exit_with_message(tui, message="", code=0)
     tui.end()
     console.log(message)
     process.exit(code)
+}
+
+export function keypress_direction(event)
+{
+    let delta_x = 0, delta_y = 0
+    if (event.full == "up") delta_y--
+    if (event.full == "down") delta_y++
+    if (event.full == "left") delta_x--
+    if (event.full == "right") delta_x++
+    return [delta_x, delta_y]
+}
+
+// returns the abstract key event notions
+// e.g. "move left", "move right", "select", "back", etc.
+export function keypress_abstract(event)
+{
+    let [delta_x, delta_y] = keypress_direction(event)
+    return {
+        delta_x, delta_y,
+        confirm: event.full == "enter",
+        cancel: event.full == "escape" || event.full == "esc" || event.full == "backspace"
+    }
+}
+
+export function draw_box(program, props)
+{
+    let chars = " ││?" + "─┌┐?" + "─└┘?"
+    if (props.style == "double")
+    {
+        chars = " ║║?" + "═╔╗?" + "═╚╝?"
+    }
+    let _x = undefined, _y = undefined // cached x, y values
+    for (let x = props.x; x < props.x + props.w; ++x)
+    {
+        for (let y = props.y; y < props.y + props.h; ++y)
+        {
+            let xborder = (x == props.x | (2 * (x == props.x + props.w - 1)))
+            let yborder = (y == props.y | 2 * (y == props.y + props.h - 1))
+            if (!xborder && !yborder && !props.filled) continue
+            let charidx = (4 * yborder) | xborder
+            if (_x != x || _y != y)
+            {
+                program.move(x, y)
+                _x = x
+                _y = y
+            }
+            _x++
+            program.write(chars[charidx])
+        }
+    }
 }
 
 // convenience

@@ -55,7 +55,7 @@ export default function Dungeon(options = {}) {
 // Decide which type the node should be.
 function decideNodeType(nodeTypes, floor /*, graph*/) {
 	const pick = (types) => shuffle(Array.from(types))[0]
-	if (floor < 2) return pick('MMME')
+	if (floor < 2) return pick('CCCCM')
 	if (floor < 3) return pick('MMMMEC')
 	if (floor < 4) return pick('MMCCMME')
 	if (floor < 5) return pick('MMCCMME')

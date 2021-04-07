@@ -10,7 +10,7 @@ const globals = {
 
     MAX_HAND_SIZE: 10, // (TODO: this is a game state constant)
     MAX_CARD_NAME_LENGTH: MAX_CARD_NAME_LENGTH,
-    CARD_SLOT_WIDTH: 5 + MAX_CARD_NAME_LENGTH,
+    CARD_SLOT_WIDTH: 5 + MAX_CARD_NAME_LENGTH, // "(X) _____+", does not include separator space between slots
     MAX_CREATURE_NAME_LENGTH: 18,
 
     // specific to encounter component

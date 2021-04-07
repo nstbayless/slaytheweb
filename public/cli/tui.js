@@ -151,7 +151,9 @@ export class TUI {
     }
 
     sort_components() {
-        this.components.sort((a, b) => {
+        // higher-depth components should be later in the list.
+        this.components.sort((_a, _b) => {
+            let a = _a.depth, b = _b.depth
             // lexicographic comparison
             for (let i = 0; i < a.length && i < b.length; ++i)
             {

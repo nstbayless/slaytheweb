@@ -1,7 +1,6 @@
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, getMonsterById, getMonsterIntent, getAliveMonsters} from '../game/utils.js'
-import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, exit_with_message} from './util.js'
-import { TUI } from './tui.js'
-import { globals, g } from './constants.js'
+import {getCurrRoom, clamp} from '../../game/utils.js'
+import { globals, g } from '../constants.js'
+import { CardComponent } from './cardselect.js'
 import { RegionComponent, SELECTABLE_AND_DEFAULT, Region } from './regioncomponent.js'
 
 export class CampfireComponent extends RegionComponent
@@ -18,7 +17,7 @@ export class CampfireComponent extends RegionComponent
     {
         this.remove_regions("options")
 
-        let rest_hp = _.clamp(Math.floor(this.game.state.player.maxHealth * 0.3 + this.game.state.player.currentHealth), 0, this.game.state.player.maxHealth)
+        let rest_hp = clamp(Math.floor(this.game.state.player.maxHealth * 0.3 + this.game.state.player.currentHealth), 0, this.game.state.player.maxHealth)
         let root = this
         let rest_hp_gain = this.game.state.player.maxHealth - rest_hp
         let options = [
@@ -38,12 +37,9 @@ export class CampfireComponent extends RegionComponent
                 cards: this.game.state.deck.filter((card) => (!card.upgraded || card.can_upgrade) && !card.cannot_upgrade),
                 activate: async function(context)
                 {
-                    let card = await root.push_context({
-                        type: "select-card",
-                        header: "Select a card to upgrade",
-                        cards: this.cards,
-                        can_cancel: true
-                    })
+                    let card = await root.tui.add_component(
+                        new CardComponent(this.cards)
+                    )
                     if (!card) return null
                     root.pop_context({
                         type: "upgrade", 
@@ -56,12 +52,9 @@ export class CampfireComponent extends RegionComponent
                 cards: this.game.state.deck.filter((card) => !card.unremovable),
                 activate: async function(context)
                 {
-                    let card = await root.push_context({
-                        type: "select-card",
-                        header: "Select a card to remove",
-                        cards: this.cards,
-                        can_cancel: true
-                    })
+                    let card = await root.tui.add_component(
+                        new CardComponent(this.cards)
+                    )
                     if (!card) return
                     root.pop_context({
                         type: "remove", 
@@ -84,6 +77,7 @@ export class CampfireComponent extends RegionComponent
                     width: option.text.length + 2,
                     height: 1,
                     option: option,
+                    cards: option.cards,
                     selectable: function(context) {
                          return context.type == "top-level" && this.option.cards.length > 0
                     },
