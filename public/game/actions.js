@@ -1,6 +1,6 @@
 import produce from '../web_modules/immer.js'
 import {createCard} from './cards.js'
-import {shuffle, getTargets, getCurrRoom, clamp} from './utils.js'
+import {shuffle, getTargets, getCurrRoom, clamp, assert} from './utils.js'
 import powers from './powers.js'
 import {dungeonWithMap} from '../content/dungeon-encounters.js'
 
@@ -27,6 +27,7 @@ function createNewGame() {
 			maxHealth: 72,
 			currentHealth: 72,
 			block: 0,
+			gold: 0,
 			powers: {},
 		},
 		// dungeon: {}
@@ -331,6 +332,42 @@ function rewardPlayer(state, {card}) {
 	})
 }
 
+function obtainReward(state, action)
+{
+	return produce(state, (draft) =>
+	{
+		 let room = getCurrRoom(draft)
+		 let rewards = room.rewards
+		 assert(rewards)
+		 assert(action.reward_idx >= 0 && action.reward_idx < rewards.length)
+		 let reward = room.rewards[action.reward_idx]
+		 assert(!reward.obtained)
+		 reward.obtained = true
+		 if (reward.type == "gold")
+		 {
+			draft.player.gold += reward.amount
+		 }
+		 if (reward.type == "card")
+		 {
+			assert(action.card_idx < reward.cards.length)
+			let card = reward.cards[action.card_idx]
+			draft.deck.push(card)
+		 }
+	})
+}
+
+function skipRewards(state, action)
+{
+	return produce(state, (draft) =>
+	{
+		 let room = getCurrRoom(draft)
+		 for (let reward of room.rewards)
+		 {
+			 reward.obtained = true
+		 }
+	})
+}
+
 // Records a move on the map.
 function move(state, {move}) {
 	let nextState = reshuffleAndDraw(state)
@@ -366,13 +403,16 @@ export default {
 	discardHand,
 	drawCards,
 	endTurn,
-	move,
 	playCard,
 	removeHealth,
 	reshuffleAndDraw,
-	rewardPlayer,
-	setDungeon,
 	takeMonsterTurn,
 	removeCard,
 	upgradeCard,
+	// dungeons
+	obtainReward,
+	rewardPlayer,
+	skipRewards,
+	setDungeon,
+	move,
 }

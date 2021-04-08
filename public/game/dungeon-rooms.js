@@ -1,4 +1,4 @@
-import {isGodMode, uuid} from './utils.js'
+import {isGodMode, random, uuid} from './utils.js'
 import {shuffle, range} from './utils.js'
 
 export function StartRoom() {
@@ -17,7 +17,7 @@ export function CampfireRoom() {
 	}
 }
 
-// A monster room has one or more monsters.
+// A monster room has one or more monsters and also some rewards
 export function MonsterRoom(...monsters) {
 	return {
 		id: uuid(),

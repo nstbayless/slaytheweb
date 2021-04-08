@@ -8,9 +8,23 @@ export function uuid(a) {
 		: ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, uuid)
 }
 
+export function env(name)
+{
+	if (!process) return false
+	if (!process.env) return false
+	return process.env[name] || false
+}
+
+export function setenv(name, value)
+{
+	if (!process) return false
+	if (!process.env) return false
+	process.env[name] = value
+}
+
 export function isGodMode()
 {
-	return process.env.STW_GODMODE || false
+	return env("STW_GODMODE")
 }
 
 // Returns a new, shuffled version of an array.
@@ -124,10 +138,25 @@ export function isRoomCompleted(room) {
 	throw new Error(`could not check if room has been completed: "${room.type}"`)
 }
 
+export function isRoomRewardReceived(room) {
+	if (room.rewards) {
+		for (let reward of room.rewards)
+		{
+			if (!reward.obtained) return false
+		}
+	}
+	return true
+}
+
 // Check if the current room in a game has been cleared.
 export function isCurrentRoomCompleted(state) {
 	const room = getCurrRoom(state)
 	return isRoomCompleted(room)
+}
+
+export function isCurrentRoomRewardReceived(state) {
+	const room = getCurrRoom(state)
+	return isRoomRewardReceived(room)
 }
 
 // Checks if the whole dungeon (all rooms) has been cleared.

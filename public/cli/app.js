@@ -1,12 +1,13 @@
 // Game logic
 import createNewGame from '../game/index.js'
-import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted} from '../game/utils.js'
+import {getCurrRoom, isCurrentRoomCompleted, isDungeonCompleted, getCurrMapNode, isRoomCompleted, setenv, isCurrentRoomRewardReceived} from '../game/utils.js'
 import {createCard, getCardRewards} from './../game/cards.js'
 import { dungeon_component } from './components/dungeon.js'
 import {TUI, Component}  from './tui.js'
 import {$d, $middle_element, _, boxline, $pm, async_sleep, exit_with_message} from './util.js'
 import { EncounterComponent } from './components/encounter.js'
 import { CampfireComponent } from './components/campfire.js'
+import { RewardComponent } from './components/reward.js'
 
 export default class App {
     constructor(props) {
@@ -73,6 +74,11 @@ export default class App {
         let current_room_type = getCurrRoom(this.game.state).type
         if (isCurrentRoomCompleted(this.game.state))
         {
+            if (!isCurrentRoomRewardReceived(this.game.state))
+            {
+                if (previous && previous.name == "reward") return previous
+                return new RewardComponent(this.game)
+            }
             if (previous && previous.name == "dungeon") return previous
             return dungeon_component(this.game)
         }
@@ -125,6 +131,8 @@ if (!TUI.AVAILBLE)
 }
 
 console.log("starting...")
+
+setenv("STW_CLI", true)
 
 let app = new App()
 

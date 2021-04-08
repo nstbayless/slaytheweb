@@ -1,6 +1,7 @@
-import {uuid, shuffle, random as randomBetween} from './utils.js'
+import {uuid, shuffle, random as randomBetween, random} from './utils.js'
 import {StartRoom, CampfireRoom} from './dungeon-rooms.js'
 import {monsters, elites, bosses} from '../content/dungeon-encounters.js'
+import { getCardRewards } from './cards.js'
 
 const defaultOptions = {
 	// How many floors.
@@ -72,9 +73,32 @@ function createRandomRoom(nodeType, floor /*, graph*/) {
 	const pickRandomFromObj = (obj) => obj[shuffle(Object.keys(obj))[0]]
 	if (floor === 0) return StartRoom()
 	if (nodeType === 'C') return CampfireRoom()
-	if (nodeType === 'M') return pickRandomFromObj(monsters)
-	if (nodeType === 'E') return pickRandomFromObj(elites)
-	if (nodeType === 'boss') return pickRandomFromObj(bosses)
+	if (nodeType === 'M' || nodeType == 'E' || nodeType == 'boss')
+	{
+		let room = pickRandomFromObj({
+			M: monsters,
+			E: elites,
+			boss: bosses
+		}[nodeType])
+		room.rewards = [{
+			type: "gold", // gold comes first
+			priority: 0,
+			amount: random(0, 50) + ((nodeType == 'E') ? random(30, 50) : 0) + ((nodeType == 'boss') ? random(50, 200) : 0)
+		},
+		{
+			priority: 100, // cards come last
+			type: "card",
+			cards: getCardRewards()
+		}]
+
+		// remove empty rewards
+		room.rewards = room.rewards.filter(
+			(reward) => !
+				(reward.type == "gold" && reward.amount === 0)
+		)
+
+		return room
+	}
 	throw new Error(`Could not match node type "${nodeType}" with a dungeon room`)
 }
 
