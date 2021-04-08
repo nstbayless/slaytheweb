@@ -9,8 +9,6 @@ export default [
 		description: 'Gain 5 Block.',
 		upgrade() {
 			this.block = 8
-			this.upgraded = true
-			this.name = 'Defend+'
 			this.description = 'Gain 8 Block.'
 		},
 	},
@@ -23,8 +21,6 @@ export default [
 		description: 'Deal 6 Damage.',
 		upgrade() {
 			this.damage = 9
-			this.upgraded = true
-			this.name = 'Strike+'
 			this.description = 'Deal 9 Damage.'
 		},
 	},
@@ -40,8 +36,6 @@ export default [
 		description: 'Deal 8 damage. Apply 2 Vulnerable.',
 		upgrade() {
 			this.damage = 10
-			this.upgraded = true
-			this.name = 'Bash+'
 			this.powers.vulnerable = 3
 			this.description = 'Deal 10 Damage. Apply 3 Vulnerable'
 		},
@@ -60,7 +54,6 @@ export default [
 		],
 		description: 'Can only be played if every card in your hand is an Attack. Deal 14 damage.',
 		upgrade() {
-			this.name = 'Clash+'
 			this.damage = 17
 			this.description =
 				'Can only be played if every card in your hand is an Attack. Deal 17 damage.'
@@ -75,8 +68,6 @@ export default [
 		description: 'Deal 8 damage to all enemies.',
 		upgrade() {
 			this.damage = 11
-			this.upgraded = true
-			this.name = 'Cleave+'
 			this.description = 'Deal 11 Damage to all enemies.'
 		},
 	},
@@ -91,8 +82,6 @@ export default [
 		upgrade() {
 			this.damage = 7
 			this.block = 7
-			this.upgraded = true
-			this.name = 'Iron Wave+'
 			this.description = 'Deal 7 Damage. Gain 7 Block.'
 		},
 	},
@@ -108,8 +97,6 @@ export default [
 		description: 'Deal 7 Damage. Apply 1 Weak.',
 		upgrade() {
 			this.damage = 8
-			this.upgraded = true
-			this.name = 'Sucker Punch+'
 			this.powers.weak = 2
 			this.description = 'Deal 8 Damage. Apply 2 Weak'
 		},
@@ -125,7 +112,6 @@ export default [
 		},
 		description: 'Deal 4 Damage. Apply 1 Vulnerable to all enemies.',
 		upgrade() {
-			this.name = 'Thunderclap+'
 			this.damage = 6
 			this.description = 'Deal 6 Damage. Apply 1 Vulnerable to all enemies.'
 		},
@@ -146,7 +132,6 @@ export default [
 			},
 		],
 		upgrade() {
-			this.name = 'Flourish+'
 			const a = this.conditions.find((action) => action.type === 'healthPercentageBelow')
 			a.percentage = 75
 			this.description = 'Gain 5 Regen. Can only be played if your health is below 75%'
@@ -185,7 +170,6 @@ export default [
 			},
 		],
 		upgrade() {
-			this.name = 'Summer of Sam+'
 			const a = this.actions.find((action) => action.type === 'addHealth')
 			a.parameter.amount = 2
 			this.description = 'Gain 2 Health. Draw 2 Cards if your health is below 50%.'
@@ -204,7 +188,6 @@ export default [
 		],
 		upgrade() {
 			this.energy = 0
-			this.name = 'Body Slam+'
 		},
 	},
 	// {name: 'Flex', energy: 0, type: 'Skill', description: 'Gain 2 Strength.'},

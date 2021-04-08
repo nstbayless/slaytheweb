@@ -46,6 +46,7 @@ export class Card {
 	constructor(props) {
 		this.id = uuid()
 		this.name = props.name
+		this.base_name = props.name
 		this.type = props.type
 		this.energy = props.energy
 		this.target = props.target
@@ -55,7 +56,7 @@ export class Card {
 		this.description = props.description
 		this.conditions = props.conditions
 		this.actions = props.actions
-		if (props.upgrade) this.upgrade = props.upgrade
+		if (props.upgrade) this._upgrade = props.upgrade
 	}
 	// Runs through a list of actions and return the updated state.
 	// Called when the card is played. Use it for more advanced cards.
@@ -79,9 +80,27 @@ export class Card {
 		return canPlay(this.conditions, state)
 	}
 	upgrade() {
-		if (this.upgraded) return
+		if (this.cannot_upgrade) return
+		if (this.upgraded && !this.can_upgrade) return
+
 		// this.name = 'Name+', this.damage = 666
 		// etc...
+
+		if (this._upgrade)
+		{
+			// cache for comparison after calling provided _upgrade function
+			let prev_name = this.name
+
+			this.upgraded = (this.upgraded | 0) + 1
+			this._upgrade()
+
+			// automatically append + to name if upgraded 
+			if (this.name == this.prev_name)
+			{
+				this.name = this.base_name + '+'
+				if (this.upgraded > 1) this.name += this.upgraded
+			}
+		}
 	}
 }
 

@@ -5,8 +5,6 @@ import { globals, g } from '../constants.js'
 import { RegionComponent, SELECTABLE_AND_DEFAULT, Region } from './regioncomponent.js'
 import powers from '../../game/powers.js'
 
-
-
 function get_target_string(state, target)
 {
     if (target === state.player) return "player"
@@ -284,7 +282,7 @@ export class EncounterComponent extends RegionComponent
                 }
                 program.write(name)
                 program.resetcol()
-                let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH
+                let hpbarwidth = 20
                 y += 1;
                 draw_hp_bar_and_block(program, {
                     hp: player.currentHealth,
@@ -371,7 +369,7 @@ export class EncounterComponent extends RegionComponent
                     let x = this.x, y = this.y
                     let monster = getMonsterById(this.root.game.state, this.monster_id)
                     if (!monster) return
-                    let name = $d(monster.name, `monster ${this.i}`)
+                    let name = $d(monster.name, `monster ${this.i + 1}`)
 
                     let intent_desc = get_intent_descriptor(getMonsterIntent(monster))
 
@@ -391,7 +389,7 @@ export class EncounterComponent extends RegionComponent
                     program.write(intent_desc.brief)
                     program.resetcol()
 
-                    let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH
+                    let hpbarwidth = g.MAX_CREATURE_NAME_LENGTH - 2
                     y += 1;
                     draw_hp_bar_and_block(program, {
                         hp: monster.currentHealth,

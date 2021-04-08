@@ -63,5 +63,6 @@ export function Monster(props = {}) {
 		intents: intents || [],
 		// A counter to keep track of which intent to run next.
 		nextIntent: 0,
+		name: props.name
 	}
 }
