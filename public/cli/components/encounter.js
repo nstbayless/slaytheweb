@@ -3,6 +3,7 @@ import {$d, $middle_element, _, boxline, blend_colors, wordWrapLines, $remove, e
 import { TUI } from '../tui.js'
 import { globals, g } from '../constants.js'
 import { RegionComponent, SELECTABLE_AND_DEFAULT, Region } from './regioncomponent.js'
+import powers from '../../game/powers.js'
 
 
 
@@ -92,6 +93,86 @@ function draw_hp_bar_and_block(program, props)
     draw_hp_bar(program, props.hp, props.maxhp, props.width, (props.block > 0) ? g.colors.block : g.colors.hp)
 }
 
+// draws powers (status effects)
+function draw_status(program, props)
+{
+    let x = props.x
+    let y = props.y
+    let w = props.w
+    let h = props.h
+
+    // accumulate properties about powers then render
+    // (in two passes)
+    let accs = {}
+    let rows = {}
+    for (let pass = 0; pass <= 1; ++pass)
+    {
+        let column = 0
+        let row_idx = 0
+        for (let key in props.powers)
+        {
+            let amount = props.powers[key]
+            if (amount == 0) continue
+            let power = powers[key]
+            if (!power) continue
+            let sym = $d(power.sym, "⚹")
+            let acc = $d(accs[power], {})
+            accs[power] = acc
+            
+            let len = sym.length
+            if (amount != 1)
+            {
+                len += ("" + amount).length
+            }
+
+            if (pass == 0)
+            {
+                // wrap to next line if not enough space
+                if (len + column > w && row_idx < h - 1)
+                {
+                    column = 0
+                    row_idx++
+                } else if (len + column >= w && row_idx == h - 1)
+                {
+                    let row = $d(rows[row_idx], {len:0})
+                    rows[row_idx] = row
+                    acc.ellipses = true
+                    row.length++
+                    break
+                }
+
+                let row = $d(rows[row_idx], {len:0})
+                rows[row_idx] = row
+                acc.column = column
+                acc.row = row_idx
+                row.len += len
+                column += len
+            }
+            else
+            {
+                let _x = x + acc.column + Math.floor((w - rows[acc.row].len) / 2)
+                let _y = y + acc.row
+                program.move(_x, _y)
+                if (acc.ellipses)
+                {
+                    program.write("⋯")
+                    break
+                }
+                else
+                {
+                    program.fg($d(power.color, "#FF00FF"))
+                    program.write(sym)
+                    program.resetfg()
+                    if (amount != 1 && amount != 0)
+                    {
+                        program.write("" + amount)
+                    }
+                }
+            }
+        }
+    }
+}
+
 function draw_hp_bar(program, hp, maxhp, width, color)
 {
     program.write("[")
@@ -158,7 +239,7 @@ export class EncounterComponent extends RegionComponent
             bottom = $d(this.hand_top_y, this.h)
         
         // center vertically
-        const rows_needed = 3
+        const rows_needed = 5
         let y = top + Math.floor((bottom - top) / 2 - rows_needed / 2)
 
         this.regions.push(new Region({
@@ -214,8 +295,14 @@ export class EncounterComponent extends RegionComponent
                     x: x + Math.floor(this.width / 2 - hpbarwidth / 2),
                     y: y
                 })
-                program.move(x, ++y)
-                program.write("(status...)")
+                y += 1
+                draw_status(program, {
+                    powers: player.powers,
+                    x: x,
+                    w: this.width,
+                    y: y,
+                    h: 3
+                })
             }
         })
         )
@@ -315,8 +402,13 @@ export class EncounterComponent extends RegionComponent
                         x: x + Math.floor(this.width / 2 - hpbarwidth / 2),
                         y: y
                     })
-                    program.move(x, ++y)
-                    program.write("(status...)")
+                    draw_status(program, {
+                        powers: monster.powers,
+                        x: x,
+                        w: this.width,
+                        y: y,
+                        h: 1
+                    })
                 }
             }))
 

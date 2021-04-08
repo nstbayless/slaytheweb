@@ -1,5 +1,12 @@
-import blessed from "../../node_modules/blessed/lib/blessed.js"
 import {$p, $pm, $d, _, $remove} from "./util.js"
+
+// optional imports
+let blessed
+try
+{
+    let {default: _blessed} = await import("../../node_modules/blessed/lib/blessed.js")
+    blessed = _blessed
+} catch(e) { blessed = null }
 
 let global_modal_component_next_depth = 0
 
@@ -38,6 +45,7 @@ export class TUI {
     static MODAL_DEPTH = 0
     static BASE_DEPTH = 1
     static UI_DEPETH = -1
+    static AVAILBLE = !!blessed && !!blessed.Program
     constructor() {
         const program = blessed.program({
         });

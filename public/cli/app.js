@@ -117,6 +117,13 @@ export default class App {
     }
 }
 
+if (!TUI.AVAILBLE)
+{
+    console.log("blessed must be installed for terminal interface.")
+    console.log("(npm install blessed)")
+    process.exit(1)
+}
+
 console.log("starting...")
 
 let app = new App()
